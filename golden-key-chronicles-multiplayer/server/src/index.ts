@@ -80,6 +80,11 @@ class ChroniclesRoom extends Room<ChronicleState> {
         }
       }
     });
+    this.onMessage("requestRoster", (client) => {
+      const player = this.state.players.get(client.sessionId);
+      client.send("assigned", { name: player?.name || "", spectator: player?.spectator || false, roomCode: this.state.roomCode });
+      client.send("roster", this.rosterSnapshot());
+    });
     this.onMessage("start", (client) => {
       if (this.state.phase === "waiting" && this.state.players.size >= 1) this.state.phase = "playing";
     });
@@ -101,8 +106,17 @@ class ChroniclesRoom extends Room<ChronicleState> {
     this.state.players.set(client.sessionId, player);
     if (this.state.players.size === 5 && this.state.phase === "waiting") this.state.event = "All five explorers have assembled.";
     client.send("assigned", { name: player.name, spectator: player.spectator, roomCode: this.state.roomCode });
+    this.broadcastRoster();
   }
-  onLeave(client: any) { const p = this.state.players.get(client.sessionId); if (p) p.connected = false; }
+  private rosterSnapshot() {
+    return { roomCode: this.state.roomCode, phase: this.state.phase, players: [...this.state.players.entries()].map(([sessionId, p]) => ({ sessionId, name: p.name, connected: p.connected, spectator: p.spectator })) };
+  }
+  private broadcastRoster() { this.broadcast("roster", this.rosterSnapshot()); }
+  onLeave(client: any) {
+    const p = this.state.players.get(client.sessionId);
+    if (p) p.connected = false;
+    this.broadcastRoster();
+  }
   onDispose() { roomIds.delete(this.state.roomCode); }
 }
 
