@@ -1,0 +1,1 @@
+{"name":"golden-key-client","version":"1.0.0","type":"module","scripts":{"dev":"vite --host 0.0.0.0","build":"vite build","preview":"vite preview --host 0.0.0.0"},"dependencies":{"colyseus.js":"^0.16.19","three":"^0.172.0"},"devDependencies":{"vite":"^6.0.5"}}
