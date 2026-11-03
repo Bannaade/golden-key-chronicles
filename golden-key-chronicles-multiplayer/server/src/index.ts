@@ -137,4 +137,4 @@ app.get("/api/rooms/:code", (req, res) => {
   res.json({ roomId });
 });
 app.get("/", (_req, res) => res.send("The Golden Key Chronicles multiplayer server is online."));
-server.listen(PORT, () => console.log(`Chronicles server listening on ${PORT}`));
+server.listen(PORT, "0.0.0.0", () => console.log(`Chronicles server listening on 0.0.0.0:${PORT}`));
