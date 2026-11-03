@@ -106,6 +106,8 @@ class ChroniclesRoom extends Room<ChronicleState> {
     this.state.players.set(client.sessionId, player);
     if (this.state.players.size === 5 && this.state.phase === "waiting") this.state.event = "All five explorers have assembled.";
     client.send("assigned", { name: player.name, spectator: player.spectator, roomCode: this.state.roomCode });
+    // Send the joining client a direct roster snapshot after adding its player.
+    client.send("roster", this.rosterSnapshot());
     this.broadcastRoster();
   }
   private rosterSnapshot() {
