@@ -32,7 +32,6 @@ class ChronicleState extends Schema {
   @type("string") event = "The portals awaken";
 }
 const names = ["Tom", "Josh", "Dave", "Joe", "Stone"];
-const roomIds = new Map<string, string>();
 const code = () => Math.random().toString(36).slice(2, 7).toUpperCase();
 
 class ChroniclesRoom extends Room<ChronicleState> {
@@ -119,7 +118,6 @@ class ChroniclesRoom extends Room<ChronicleState> {
     if (p) p.connected = false;
     this.broadcastRoster();
   }
-  onDispose() { roomIds.delete(this.state.roomCode); }
 }
 
 const gameServer = new Server({ transport: new WebSocketTransport({ server }) });
@@ -129,14 +127,27 @@ app.post("/api/rooms", async (_req, res) => {
   try {
     const roomCode = code();
     const listing = await matchMaker.createRoom("chronicles", { roomCode });
-    roomIds.set(roomCode, listing.roomId);
+    console.log(`[rooms] created code=${roomCode} roomId=${listing.roomId}`);
     res.status(201).json({ roomCode, roomId: listing.roomId });
   } catch (e) { res.status(500).json({ error: "Could not create room" }); }
 });
-app.get("/api/rooms/:code", (req, res) => {
-  const roomId = roomIds.get(req.params.code.toUpperCase());
-  if (!roomId) return res.status(404).json({ error: "Room not found. Ask the host for a fresh invitation." });
-  res.json({ roomId });
+app.get("/api/rooms/:code", async (req, res) => {
+  const roomCode = req.params.code.trim().toUpperCase();
+  try {
+    // Resolve invitation codes from Colyseus matchmaking metadata rather than
+    // a process-local Map, which can become stale or disappear after restarts.
+    const rooms = await matchMaker.query({ name: "chronicles", roomCode });
+    const room = rooms.find((entry: any) => entry.metadata?.roomCode === roomCode || entry.roomCode === roomCode);
+    if (!room) {
+      console.warn(`[rooms] lookup miss code=${roomCode}`);
+      return res.status(404).json({ error: "Room not found. Ask the host for a fresh invitation." });
+    }
+    console.log(`[rooms] lookup hit code=${roomCode} roomId=${room.roomId}`);
+    res.json({ roomId: room.roomId });
+  } catch (error) {
+    console.error(`[rooms] lookup failed code=${roomCode}`, error);
+    res.status(500).json({ error: "Could not look up room. Please try again." });
+  }
 });
 app.get("/", (_req, res) => res.send("The Golden Key Chronicles multiplayer server is online."));
 server.listen(PORT, "0.0.0.0", () => console.log(`Chronicles server listening on 0.0.0.0:${PORT}`));
