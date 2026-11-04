@@ -136,7 +136,7 @@ app.get("/api/rooms/:code", async (req, res) => {
   try {
     // Resolve invitation codes from Colyseus matchmaking metadata rather than
     // a process-local Map, which can become stale or disappear after restarts.
-    const rooms = await matchMaker.query({ name: "chronicles", roomCode });
+    const rooms = await matchMaker.query({ name: "chronicles" });
     const room = rooms.find((entry: any) => entry.metadata?.roomCode === roomCode);
     if (!room) {
       console.warn(`[rooms] lookup miss code=${roomCode}`);
