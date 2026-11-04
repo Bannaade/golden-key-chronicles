@@ -39,6 +39,9 @@ class ChroniclesRoom extends Room<ChronicleState> {
   onCreate(options: any) {
     this.setState(new ChronicleState());
     this.state.roomCode = options.roomCode || code();
+    // Use the invitation code as the actual Colyseus room ID. This removes
+    // the separate code-to-room lookup and its metadata/cache failure mode.
+    this.roomId = this.state.roomCode;
     this.state.keyWorld = Math.floor(Math.random() * 5);
     this.state.keyX = 10 + Math.floor(Math.random() * 30);
     this.state.keyZ = 10 + Math.floor(Math.random() * 30);
@@ -134,11 +137,9 @@ app.post("/api/rooms", async (_req, res) => {
 app.get("/api/rooms/:code", async (req, res) => {
   const roomCode = req.params.code.trim().toUpperCase();
   try {
-    // Resolve invitation codes from Colyseus matchmaking metadata rather than
-    // a process-local Map, which can become stale or disappear after restarts.
-    const rooms = await matchMaker.query({ name: "chronicles", roomCode });
-    const room = rooms[0];
-    if (!room) {
+    // Invitation code is also the actual Colyseus room ID.
+    const room = await matchMaker.getRoomById(roomCode);
+    if (!room || room.name !== "chronicles") {
       console.warn(`[rooms] lookup miss code=${roomCode}`);
       return res.status(404).json({ error: "Room not found. Ask the host for a fresh invitation." });
     }
